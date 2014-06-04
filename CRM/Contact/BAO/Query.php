@@ -2539,7 +2539,14 @@ class CRM_Contact_BAO_Query {
       }
       else {
         $quill = $clause;
-        $type = array_pop($clause);
+        //CRM-14791
+        if ( count($clause) > 1 ) {
+          $op = 'IN';
+          $type = "(".implode(", ", $clause).")";
+        }
+        else {
+          $type = array_pop($clause);
+        }
         $this->_where[$grouping][] = "contact_a.contact_type $op $type";
       }
 
