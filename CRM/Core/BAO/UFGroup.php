@@ -515,9 +515,13 @@ class CRM_Core_BAO_UFGroup extends CRM_Core_DAO_UFGroup {
       ),
       'skipDisplay' => 0,
       'data_type' => CRM_Utils_Type::getDataTypeFromFieldMetadata($fieldMetaData),
+      'bao' => CRM_Utils_Array::value('bao', $fieldMetaData),
     );
 
     $formattedField = CRM_Utils_Date::addDateMetadataToField($fieldMetaData, $formattedField);
+    if (in_array($name, array_keys(self::getNonUpgradedDateFields()))) {
+      $formattedField['is_legacy_date'] = 1;
+    }
 
     //adding custom field property
     if (substr($field->field_name, 0, 6) == 'custom' ||
@@ -534,11 +538,8 @@ class CRM_Core_BAO_UFGroup extends CRM_Core_DAO_UFGroup {
         if (CRM_Utils_Array::value('html_type', $formattedField) == 'Select Date') {
           $formattedField['date_format'] = $customFields[$field->field_name]['date_format'];
           $formattedField['time_format'] = $customFields[$field->field_name]['time_format'];
-          $formattedField['php_datetime_format'] = CRM_Utils_Date::getPhpDateFormatFromInputStyleDateFormat($customFields[$field->field_name]['date_format']);
-          if ($formattedField['time_format']) {
-            $formattedField['php_datetime_format'] .= ' H-i-s';
-          }
           $formattedField['is_datetime_field'] = TRUE;
+          $formattedField['smarty_view_format'] = CRM_Utils_Date::getDateFieldViewFormat($formattedField['date_format']);
         }
 
         $formattedField['is_multi_summary'] = $field->is_multi_summary;
@@ -1073,19 +1074,6 @@ class CRM_Core_BAO_UFGroup extends CRM_Core_DAO_UFGroup {
           $values[$index] = $details->$name;
           $idx = $name . '_id';
           $params[$index] = $details->$idx;
-        }
-        elseif ($name === 'preferred_communication_method') {
-          $communicationFields = CRM_Core_PseudoConstant::get('CRM_Contact_DAO_Contact', 'preferred_communication_method');
-          $compref = array();
-          $pref = explode(CRM_Core_DAO::VALUE_SEPARATOR, $details->$name);
-
-          foreach ($pref as $k) {
-            if ($k) {
-              $compref[] = $communicationFields[$k];
-            }
-          }
-          $params[$index] = $details->$name;
-          $values[$index] = implode(',', $compref);
         }
         elseif ($name === 'preferred_language') {
           $params[$index] = $details->$name;
@@ -1905,6 +1893,7 @@ AND    ( entity_id IS NULL OR entity_id <= 0 )
     $addressOptions = CRM_Core_BAO_Setting::valueOptions(CRM_Core_BAO_Setting::SYSTEM_PREFERENCES_NAME,
       'address_options', TRUE, NULL, TRUE
     );
+    $legacyHandledDateFields = self::getNonUpgradedDateFields();
 
     if (substr($fieldName, 0, 14) === 'state_province') {
       $form->addChainSelect($name, array('label' => $title, 'required' => $required));
@@ -1967,15 +1956,8 @@ AND    ( entity_id IS NULL OR entity_id <= 0 )
         }
       }
     }
-    elseif (($fieldName === 'birth_date') || ($fieldName === 'deceased_date')) {
-      $form->addDate($name, $title, $required, array('formatType' => 'birth'));
-    }
-    elseif (in_array($fieldName, array(
-      'membership_start_date',
-      'membership_end_date',
-      'join_date',
-    ))) {
-      $form->addDate($name, $title, $required, array('formatType' => 'activityDate'));
+    elseif (isset($legacyHandledDateFields[$fieldName])) {
+      $form->addDate($name, $title, $required, array('formatType' => $legacyHandledDateFields[$fieldName]));
     }
     elseif (CRM_Utils_Array::value('name', $field) == 'membership_type') {
       list($orgInfo, $types) = CRM_Member_BAO_MembershipType::getMembershipTypeInfo();
@@ -2151,14 +2133,6 @@ AND    ( entity_id IS NULL OR entity_id <= 0 )
         CRM_Core_BAO_CustomField::addQuickFormElement($form, $name, $customFieldID, $required, $search, $title);
       }
     }
-    elseif (in_array($fieldName, array(
-      'receive_date',
-      'receipt_date',
-      'thankyou_date',
-      'cancel_date',
-    ))) {
-      $form->addDateTime($name, $title, $required, array('formatType' => 'activityDateTime'));
-    }
     elseif ($fieldName == 'send_receipt') {
       $form->addElement('checkbox', $name, $title);
     }
@@ -2230,9 +2204,6 @@ AND    ( entity_id IS NULL OR entity_id <= 0 )
         ) + CRM_Contribute_PseudoConstant::contributionPage(), $required, 'class="big"'
       );
     }
-    elseif ($fieldName == 'participant_register_date') {
-      $form->addDateTime($name, $title, $required, array('formatType' => 'activityDateTime'));
-    }
     elseif ($fieldName == 'activity_status_id') {
       $form->add('select', $name, $title,
         array(
@@ -2246,9 +2217,6 @@ AND    ( entity_id IS NULL OR entity_id <= 0 )
           '' => ts('- select -'),
         ) + CRM_Campaign_PseudoConstant::engagementLevel(), $required
       );
-    }
-    elseif ($fieldName == 'activity_date_time') {
-      $form->addDateTime($name, $title, $required, array('formatType' => 'activityDateTime'));
     }
     elseif ($fieldName == 'participant_status') {
       $cond = NULL;
@@ -2305,6 +2273,11 @@ AND    ( entity_id IS NULL OR entity_id <= 0 )
       if (substr($fieldName, 0, 3) === 'is_' or substr($fieldName, 0, 7) === 'do_not_') {
         $form->add('advcheckbox', $name, $title, $attributes, $required);
       }
+      elseif (CRM_Utils_Array::value('html_type', $field) === 'Select Date') {
+        $extra = isset($field['datepicker']) ? $field['datepicker']['extra'] : CRM_Utils_Date::getDatePickerExtra($field);
+        $attributes = isset($field['datepicker']) ? $field['datepicker']['attributes'] : CRM_Utils_Date::getDatePickerAttributes($field);
+        $form->add('datepicker', $name, $title, $attributes, $required, $extra);
+      }
       else {
         $form->add('text', $name, $title, $attributes, $required);
       }
@@ -2345,6 +2318,27 @@ AND    ( entity_id IS NULL OR entity_id <= 0 )
         $form->addRule($name, ts('Please enter a valid %1', array(1 => $title)), $rule);
       }
     }
+  }
+
+  /**
+   * Get fields that have not been upgraded to use datepicker.
+   *
+   * Fields that use the old code have jcalendar in the tpl and
+   * the form uses a customised format. We are moving towards datepicker
+   * which among other things passes dates back and forth using a standardised
+   * format. Remove fields from here as they are tested and converted.
+   */
+  static public function getNonUpgradedDateFields() {
+    return array(
+      'membership_start_date' => 'activityDate',
+      'membership_end_date' => 'activityDate',
+      'join_date' => 'activityDate',
+      'receive_date' => 'activityDateTime',
+      'receipt_date' => 'activityDateTime',
+      'thankyou_date' => 'activityDateTime',
+      'cancel_date' => 'activityDateTime',
+      'activity_date_time' => 'activityDateTime',
+    );
   }
 
   /**
@@ -2397,10 +2391,7 @@ AND    ( entity_id IS NULL OR entity_id <= 0 )
         if (!empty($details[$name]) || isset($details[$name])) {
           //to handle custom data (checkbox) to be written
           // to handle birth/deceased date, greeting_type and few other fields
-          if (($name == 'birth_date') || ($name == 'deceased_date')) {
-            list($defaults[$fldName]) = CRM_Utils_Date::setDateDefaults($details[$name], 'birth');
-          }
-          elseif (in_array($name, CRM_Contact_BAO_Contact::$_greetingTypes)) {
+          if (in_array($name, CRM_Contact_BAO_Contact::$_greetingTypes)) {
             $defaults[$fldName] = $details[$name . '_id'];
             $defaults[$name . '_custom'] = $details[$name . '_custom'];
           }
@@ -2456,24 +2447,30 @@ AND    ( entity_id IS NULL OR entity_id <= 0 )
                 break;
 
               case 'Select Date':
-                // CRM-6681, set defult values according to date and time format (if any).
-                $dateFormat = NULL;
-                if (!empty($customFields[$customFieldId]['date_format'])) {
-                  $dateFormat = $customFields[$customFieldId]['date_format'];
-                }
-
-                if (empty($customFields[$customFieldId]['time_format'])) {
-                  list($defaults[$fldName]) = CRM_Utils_Date::setDateDefaults($details[$name], NULL,
-                    $dateFormat
-                  );
+                if (!in_array($name, array_keys(self::getNonUpgradedDateFields()))) {
+                  $defaults[$fldName] = $details[$name];
                 }
                 else {
-                  $timeElement = $fldName . '_time';
-                  if (substr($fldName, -1) == ']') {
-                    $timeElement = substr($fldName, 0, -1) . '_time]';
+                  // Do legacy handling.
+                  // CRM-6681, set defult values according to date and time format (if any).
+                  $dateFormat = NULL;
+                  if (!empty($customFields[$customFieldId]['date_format'])) {
+                    $dateFormat = $customFields[$customFieldId]['date_format'];
                   }
-                  list($defaults[$fldName], $defaults[$timeElement]) = CRM_Utils_Date::setDateDefaults($details[$name],
-                    NULL, $dateFormat, $customFields[$customFieldId]['time_format']);
+
+                  if (empty($customFields[$customFieldId]['time_format'])) {
+                    list($defaults[$fldName]) = CRM_Utils_Date::setDateDefaults($details[$name], NULL,
+                      $dateFormat
+                    );
+                  }
+                  else {
+                    $timeElement = $fldName . '_time';
+                    if (substr($fldName, -1) == ']') {
+                      $timeElement = substr($fldName, 0, -1) . '_time]';
+                    }
+                    list($defaults[$fldName], $defaults[$timeElement]) = CRM_Utils_Date::setDateDefaults($details[$name],
+                      NULL, $dateFormat, $customFields[$customFieldId]['time_format']);
+                  }
                 }
                 break;
 
@@ -3291,17 +3288,8 @@ AND    ( entity_id IS NULL OR entity_id <= 0 )
 
     $formattedGroupTree = array();
     // @todo - as we put these on datepicker they need to be removed from here.
-    $dateTimeFields = array(
-      'participant_register_date',
-      'activity_date_time',
-      'receive_date',
-      'receipt_date',
-      'cancel_date',
-      'thankyou_date',
-      'membership_start_date',
-      'membership_end_date',
-      'join_date',
-    );
+    $dateTimeFields = array_keys(self::getNonUpgradedDateFields());
+
     foreach ($fields as $name => $field) {
       $fldName = $isStandalone ? $name : "field[$componentId][$name]";
       if (in_array($name, $dateTimeFields)) {
