@@ -623,10 +623,14 @@ class CRM_Contribute_Form_ContributionBase extends CRM_Core_Form {
 
       if ($fields) {
         // unset any email-* fields since we already collect it, CRM-2888
-        foreach (array_keys($fields) as $fieldName) {
-          if (substr($fieldName, 0, 6) == 'email-' && !in_array($profileContactType, array('honor', 'onbehalf'))) {
-            unset($fields[$fieldName]);
-          }
+         foreach ($fields as $key=>$field) {
+			if (substr($key, 0, 6) == 'email-' && !in_array($profileContactType, array('honor', 'onbehalf')) ) {
+				if($field['location_type_id'] ==0){
+					$this->primary_exist=1;
+					unset($fields[$key]);	
+				}
+			
+			}
         }
 
         if (array_intersect_key($fields, $fieldsToIgnore)) {
