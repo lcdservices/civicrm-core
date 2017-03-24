@@ -2273,8 +2273,7 @@ class CRM_Contact_BAO_Query {
       }
       else {
         if ($tableName == 'civicrm_contact') {
-          // LOWER roughly translates to 'hurt my database without deriving any benefit' See CRM-19811.
-          $fieldName = "LOWER(contact_a.{$fieldName})";
+          $fieldName = "contact_a.{$fieldName}";
         }
         else {
           if ($op != 'IN' && !is_numeric($value) && !is_array($value)) {
@@ -2976,7 +2975,7 @@ class CRM_Contact_BAO_Query {
         $gcTable = ($op == '!=') ? 'cgc' : $gcTable;
         $childClause = " OR {$gcTable}.group_id IN (" . implode(',', $childGroupIds) . ") ";
       }
-      $groupClause[] = sprintf($clause, $childClause);
+      $groupClause[] = '(' . sprintf($clause, $childClause) . ')';
     }
 
     //CRM-19589: contact(s) removed from a Smart Group, resides in civicrm_group_contact table
@@ -2985,7 +2984,7 @@ class CRM_Contact_BAO_Query {
     }
 
     $and = ($op == 'IS NULL') ? ' AND ' : ' OR ';
-    $this->_where[$grouping][] = implode($and, $groupClause);
+    $this->_where[$grouping][] = ' ( ' . implode($and, $groupClause) . ' ) ';
 
     list($qillop, $qillVal) = CRM_Contact_BAO_Query::buildQillForFieldValue('CRM_Contact_DAO_Group', 'id', $value, $op);
     $this->_qill[$grouping][] = ts("Group(s) %1 %2", array(1 => $qillop, 2 => $qillVal));
@@ -4789,11 +4788,9 @@ civicrm_relationship.is_permission_a_b = 0
     $onlyDeleted = in_array(array('deleted_contacts', '=', '1', '0', '0'), $this->_params);
     list($select, $from, $where) = $this->query(FALSE, FALSE, FALSE, $onlyDeleted);
     $from = " FROM civicrm_prevnext_cache pnc INNER JOIN civicrm_contact contact_a ON contact_a.id = pnc.entity_id1 AND pnc.cacheKey = '$cacheKey' " . substr($from, 31);
-    $order = " ORDER BY pnc.id";
-    $groupByCol = array('contact_a.id', 'pnc.id');
-    $groupBy = self::getGroupByFromSelectColumns($this->_select, $groupByCol);
+    $groupBy = self::getGroupByFromSelectColumns($this->_select, array('contact_a.id'));
     $limit = " LIMIT $offset, $rowCount";
-    $query = "$select $from $where $groupBy $order $limit";
+    $query = "$select $from $where $groupBy $limit";
 
     return CRM_Core_DAO::executeQuery($query);
   }

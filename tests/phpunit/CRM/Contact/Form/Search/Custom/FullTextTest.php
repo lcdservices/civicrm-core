@@ -1,5 +1,5 @@
 <?php
-/*
+/**
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
@@ -25,37 +25,50 @@
  +--------------------------------------------------------------------+
  */
 
-/**
- * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
- */
-
-/**
- * This class is used by the Search functionality.
- *
- *  - the search controller is used for building/processing multiform
- *    searches.
- *
- * Typically the first form will display the search criteria and its results
- *
- * The second form is used to process search results with the associated actions
- *
- */
-class CRM_Contribute_Controller_Search extends CRM_Core_Controller {
+class CRM_Contact_Form_Search_Custom_FullTextTest extends CiviUnitTestCase {
 
   /**
-   * Class constructor.
-   *
-   * @param string $title
-   * @param bool|int $action
-   * @param bool $modal
+   * @var array
    */
-  public function __construct($title = NULL, $action = CRM_Core_Action::NONE, $modal = TRUE) {
+  protected $_tablesToTruncate = array(
+    'civicrm_acl_contact_cache',
+  );
 
-    parent::__construct($title, $modal);
-    $this->_stateMachine = new CRM_Contribute_StateMachine_Search($this, $action);
-    $this->addPages($this->_stateMachine, $action);
-    $this->addActions();
+  /**
+   * Test ACL contacts are filtered properly.
+   */
+  public function testfilterACLContacts() {
+    $this->quickCleanup($this->_tablesToTruncate);
+
+    $userId = $this->createLoggedInUser();
+    // remove all permissions
+    $config = CRM_Core_Config::singleton();
+    $config->userPermissionClass->permissions = array();
+
+    for ($i = 1; $i <= 10; $i++) {
+      $contactId = $this->individualCreate(array(), $i);
+      if ($i <= 5) {
+        $queryParams = array(
+          1 => array($userId, 'Integer'),
+          2 => array($contactId, 'Integer'),
+        );
+        CRM_Core_DAO::executeQuery("INSERT INTO civicrm_acl_contact_cache ( user_id, contact_id, operation ) VALUES(%1, %2, 'View')", $queryParams);
+      }
+      $contactIDs[$i] = $contactId;
+    }
+
+    $formValues = array('component_mode' => 1, 'operator' => 1, 'is_unit_test' => 1);
+    $fullText = new CRM_Contact_Form_Search_Custom_FullText($formValues);
+    $fullText->initialize();
+
+    //Assert that ACL contacts are filtered.
+    $queryParams = array(1 => array($userId, 'Integer'));
+    $whereClause = "WHERE NOT EXISTS (SELECT c.contact_id
+      FROM civicrm_acl_contact_cache c
+      WHERE c.user_id = %1 AND t.contact_id = c.contact_id )";
+
+    $count = CRM_Core_DAO::singleValueQuery("SELECT COUNT(*) FROM {$fullText->_tableNameForTest} t {$whereClause}", $queryParams);
+    $this->assertEmpty($count, 'ACL contacts are not removed.');
   }
 
 }
