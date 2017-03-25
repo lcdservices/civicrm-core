@@ -68,17 +68,16 @@ class CRM_Contact_Form_Edit_CommunicationPreferences {
 
     // preferred communication method
     $comm = CRM_Core_PseudoConstant::get('CRM_Contact_DAO_Contact', 'preferred_communication_method', array('loclize' => TRUE));
-    foreach ($comm as $value => $title) {
-      $commPreff[] = $form->createElement('advcheckbox', $value, NULL, $title);
-    }
-    $form->addField('preferred_communication_method', array('entity' => 'contact', 'type' => 'CheckBoxGroup'));
+    $form->add('select', 'preferred_communication_method',
+      ts('Preferred Communication Method(s)'),
+      $comm,
+      FALSE, array('class' => 'crm-select2', 'multiple' => 'multiple', 'placeholder' => ts('- none -'))
+    );
+
     $form->addField('preferred_language', array('entity' => 'contact'));
 
     if (!empty($privacyOptions)) {
       $commPreference['privacy'] = $privacyOptions;
-    }
-    if (!empty($comm)) {
-      $commPreference['preferred_communication_method'] = $comm;
     }
 
     //using for display purpose.

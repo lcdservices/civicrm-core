@@ -54,6 +54,14 @@
       {/foreach}
       <div class="crm-summary-row">
         <div class="crm-label">
+          {$form.preferred_communication_method.label} {help id="id-preferred_communication_method" file="CRM/Contact/Form/Contact.hlp"}
+        </div>
+        <div class="crm-content">{
+          $form.preferred_communication_method.html}
+        </div>
+      </div>
+      <div class="crm-summary-row">
+        <div class="crm-label">
           {$form.preferred_language.label}
         </div>
         <div class="crm-content">
