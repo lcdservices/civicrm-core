@@ -341,17 +341,15 @@ class CRM_Contribute_Form_Contribution_Main extends CRM_Contribute_Form_Contribu
 
     $this->applyFilter('__ALL__', 'trim');
     if (empty($this->_ccid)) {
-		
-		if($this->_emailExistst==0){
-			
-			$this->add('text', "email-{$this->_bltID}",
-			ts('Email Address'),
-			array('size' => 30, 'maxlength' => 60, 'class' => 'email'),
-			TRUE
-			);
-			$this->addRule("email-{$this->_bltID}", ts('Email is not valid.'), 'email');
-		}
-	}
+      if($this->_emailExists == FALSE){
+        $this->add('text', "email-{$this->_bltID}",
+          ts('Email Address'),
+          array('size' => 30, 'maxlength' => 60, 'class' => 'email'),
+          TRUE
+        );
+        $this->addRule("email-{$this->_bltID}", ts('Email is not valid.'), 'email');
+      }
+    }
     else {
       $this->addElement('hidden', "email-{$this->_bltID}", 1);
       $this->add('text', 'total_amount', ts('Total Amount'), array('readonly' => TRUE), FALSE);
