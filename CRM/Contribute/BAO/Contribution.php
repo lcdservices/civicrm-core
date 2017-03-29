@@ -1722,8 +1722,24 @@ LEFT JOIN  civicrm_contribution contribution ON ( componentPayment.contribution_
       if (is_array($memberships)) {
         foreach ($memberships as $membership) {
           if ($membership) {
-            $membership->status_id = array_search('Cancelled', $membershipStatuses);
+            $newStatus = array_search('Cancelled', $membershipStatuses);
+
+            // Create activity
+            $allStatus = CRM_Member_BAO_Membership::buildOptions('status_id', 'get');
+            $activityParam = array(
+              'subject' => "Status changed from {$allStatus[$membership->status_id]} to {$allStatus[$newStatus]}",
+              'source_contact_id' => CRM_Core_Session::singleton()->get('userID'),
+              'target_contact_id' => $membership->contact_id,
+              'source_record_id' => $membership->id,
+              'activity_type_id' => 'Change Membership Status',
+              'status_id' => 'Completed',
+              'priority_id' => 'Normal',
+              'activity_date_time' => 'now',
+            );
+
+            $membership->status_id = $newStatus;
             $membership->save();
+            civicrm_api3('activity', 'create', $activityParam);
 
             $updateResult['updatedComponents']['CiviMember'] = $membership->status_id;
             if ($processContributionObject) {
@@ -4053,7 +4069,7 @@ WHERE eft.financial_trxn_id IN ({$trxnId}, {$baseTrxnId['financialTrxnId']})
         SELECT GROUP_CONCAT(fa.`name`) as financial_account,
           ft.total_amount,
           ft.payment_instrument_id,
-          ft.trxn_date, ft.trxn_id, ft.status_id, ft.check_number, con.currency
+          ft.trxn_date, ft.trxn_id, ft.status_id, ft.check_number, ft.currency, ft.pan_truncation, ft.card_type
 
         FROM civicrm_contribution con
           LEFT JOIN civicrm_entity_financial_trxn eft ON (eft.entity_id = con.id AND eft.entity_table = 'civicrm_contribution')
@@ -4075,6 +4091,14 @@ WHERE eft.financial_trxn_id IN ({$trxnId}, {$baseTrxnId['financialTrxnId']})
       while ($resultDAO->fetch()) {
         $paidByLabel = CRM_Core_PseudoConstant::getLabel('CRM_Core_BAO_FinancialTrxn', 'payment_instrument_id', $resultDAO->payment_instrument_id);
         $paidByName = CRM_Core_PseudoConstant::getName('CRM_Core_BAO_FinancialTrxn', 'payment_instrument_id', $resultDAO->payment_instrument_id);
+        if ($resultDAO->card_type) {
+          $creditCardType = CRM_Core_PseudoConstant::getLabel('CRM_Core_BAO_FinancialTrxn', 'card_type', $resultDAO->card_type);
+          $pantruncation = '';
+          if ($resultDAO->pan_truncation) {
+            $pantruncation = ": {$resultDAO->pan_truncation}";
+          }
+          $paidByLabel .= " ({$creditCardType}{$pantruncation})";
+        }
         $val = array(
           'total_amount' => $resultDAO->total_amount,
           'financial_type' => $resultDAO->financial_account,
@@ -4532,6 +4556,8 @@ WHERE eft.financial_trxn_id IN ({$trxnId}, {$baseTrxnId['financialTrxnId']})
 
             // CRM-8141 update the membership type with the value recorded in log when membership created/renewed
             // this picks up membership type changes during renewals
+            // @todo this is almost certainly an obsolete sql call, the pre-change
+            // membership is accessible via $this->_relatedObjects
             $sql = "
 SELECT    membership_type_id
 FROM      civicrm_membership_log

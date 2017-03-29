@@ -483,4 +483,84 @@ class api_v3_CaseTest extends CiviCaseTestCase {
     $this->assertNotEmpty($def['caseRoles'][0]['creator']);
   }
 
+  public function testCaseGetTags() {
+    $case1 = $this->callAPISuccess('Case', 'create', array(
+      'contact_id' => 17,
+      'subject' => "Test case with tags",
+      'case_type_id' => $this->caseTypeId,
+      'status_id' => "Open",
+    ));
+    $tag1 = $this->tagCreate(array(
+      'name' => 'CaseTag1',
+      'used_for' => 'civicrm_case',
+    ));
+    $tag2 = $this->tagCreate(array(
+      'name' => 'CaseTag2',
+      'used_for' => 'civicrm_case',
+    ));
+    $this->callAPISuccess('EntityTag', 'create', array(
+      'entity_table' => 'civicrm_case',
+      'entity_id' => $case1['id'],
+      'tag_id' => $tag1['id'],
+    ));
+    $this->callAPIFailure('Case', 'getsingle', array(
+      'tag_id' => $tag2['id'],
+    ));
+    $result = $this->callAPISuccessGetSingle('Case', array(
+      'tag_id' => $tag1['id'],
+      'return' => 'tag_id.name',
+    ));
+    $this->assertEquals('CaseTag1', $result['tag_id'][$tag1['id']]['tag_id.name']);
+  }
+
+  /**
+   * Test that a chained api call can use the operator syntax.
+   *
+   * E.g. array('IN' => $value.contact_id)
+   *
+   * @throws \Exception
+   */
+  public function testCaseGetChainedOp() {
+    $contact1 = $this->individualCreate(array(), 1);
+    $contact2 = $this->individualCreate(array(), 2);
+    $case1 = $this->callAPISuccess('Case', 'create', array(
+      'contact_id' => $contact1,
+      'subject' => "Test case 1",
+      'case_type_id' => $this->caseTypeId,
+    ));
+    $case2 = $this->callAPISuccess('Case', 'create', array(
+      'contact_id' => $contact2,
+      'subject' => "Test case 2",
+      'case_type_id' => $this->caseTypeId,
+    ));
+    $case3 = $this->callAPISuccess('Case', 'create', array(
+      'contact_id' => array($contact1, $contact2),
+      'subject' => "Test case 3",
+      'case_type_id' => $this->caseTypeId,
+    ));
+
+    // Fetch case 1 and all cases with the same client. Chained get should return case 3.
+    $result = $this->callAPISuccessGetSingle('Case', array(
+      'id' => $case1['id'],
+      'return' => 'contact_id',
+      'api.Case.get' => array(
+        'contact_id' => array('IN' => "\$value.contact_id"),
+        'id' => array('!=' => "\$value.id"),
+      ),
+    ));
+    $this->assertEquals($case3['id'], $result['api.Case.get']['id']);
+
+    // Fetch case 3 and all cases with the same clients. Chained get should return case 1&2.
+    $result = $this->callAPISuccessGetSingle('Case', array(
+      'id' => $case3['id'],
+      'return' => array('contact_id'),
+      'api.Case.get' => array(
+        'return' => 'id',
+        'contact_id' => array('IN' => "\$value.contact_id"),
+        'id' => array('!=' => "\$value.id"),
+      ),
+    ));
+    $this->assertEquals(array($case1['id'], $case2['id']), array_keys(CRM_Utils_Array::rekey($result['api.Case.get']['values'], 'id')));
+  }
+
 }
