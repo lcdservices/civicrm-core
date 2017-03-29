@@ -186,7 +186,7 @@ class CRM_Contribute_Form_ContributionBase extends CRM_Core_Form {
    * @var
    */
   public $_isBillingAddressRequiredForPayLater;
-
+  public  $_emailExists =0;
   /**
    * Set variables up before form is built.
    *
@@ -624,13 +624,13 @@ class CRM_Contribute_Form_ContributionBase extends CRM_Core_Form {
       if ($fields) {
         // unset any email-* fields since we already collect it, CRM-2888
          foreach ($fields as $key=>$field) {
-			if (substr($key, 0, 6) == 'email-' && !in_array($profileContactType, array('honor', 'onbehalf')) ) {
-				if($field['location_type_id'] ==0){
-					$this->primary_exist=1;
-					unset($fields[$key]);	
-				}
 			
-			}
+          if (substr($key, 0, 6) == 'email-' && !in_array($profileContactType, array('honor', 'onbehalf')) ) {
+           
+		   $this->_emailExistst =$this->_emailExistst+1;
+		   
+			
+          }
         }
 
         if (array_intersect_key($fields, $fieldsToIgnore)) {
