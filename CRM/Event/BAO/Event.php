@@ -95,11 +95,6 @@ class CRM_Event_BAO_Event extends CRM_Event_DAO_Event {
       CRM_Utils_Hook::pre('create', 'Event', NULL, $params);
     }
 
-    // CRM-16189
-    if (!empty($params['financial_type_id'])) {
-      CRM_Financial_BAO_FinancialAccount::validateFinancialType($params['financial_type_id']);
-    }
-
     $event = new CRM_Event_DAO_Event();
 
     $event->copyValues($params);
@@ -1038,7 +1033,7 @@ WHERE civicrm_event.is_active = 1
           if (in_array($field, $htmlType)) {
             $fileValues = CRM_Core_BAO_File::path($value, $oldEventID);
             $customParams["custom_{$field}_-1"] = array(
-              'name' => $fileValues[0],
+              'name' => CRM_Utils_File::duplicate($fileValues[0]),
               'type' => $fileValues[1],
             );
           }

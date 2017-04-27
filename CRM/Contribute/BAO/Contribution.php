@@ -193,8 +193,6 @@ class CRM_Contribute_BAO_Contribution extends CRM_Contribute_DAO_Contribution {
       $params['prevContribution'] = self::getOriginalContribution($contributionID);
     }
 
-    // CRM-16189
-    CRM_Financial_BAO_FinancialAccount::checkFinancialTypeHasDeferred($params, $contributionID);
     if ($contributionID && !empty($params['revenue_recognition_date']) && !empty($params['prevContribution'])
       && !($contributionStatus[$params['prevContribution']->contribution_status_id] == 'Pending')
       && !self::allowUpdateRevenueRecognitionDate($contributionID)
@@ -1052,6 +1050,12 @@ LEFT JOIN  civicrm_line_item i ON ( i.contribution_id = c.id AND i.entity_table 
       'source_record_id' => $contributionID,
       'source_contact_id' => CRM_Core_Session::getLoggedInContactID() ? CRM_Core_Session::getLoggedInContactID() :
         $contactID,
+    ));
+
+    // CRM-20336 Make sure that the contribution status is Failed, not Pending.
+    civicrm_api3('contribution', 'create', array(
+      'id' => $contributionID,
+      'contribution_status_id' => 'Failed',
     ));
   }
 
@@ -2555,6 +2559,11 @@ INNER JOIN civicrm_activity ON civicrm_activity_contact.activity_id = civicrm_ac
             if ($membership_status == 'Pending' && $membership->is_pay_later == 1) {
               $values['is_pay_later'] = 1;
             }
+            // Pass amount to floatval as string '0.00' is considered a
+            // valid amount and includes Fee section in the mail.
+            if (isset($values['amount'])) {
+              $values['amount'] = floatval($values['amount']);
+            }
 
             if (!empty($this->contribution_recur_id) && $paymentObject) {
               $url = $paymentObject->subscriptionURL($membership->id, 'membership', 'cancel');
@@ -3365,6 +3374,9 @@ INNER JOIN civicrm_activity ON civicrm_activity_contact.activity_id = civicrm_ac
               civicrm_api3('FinancialTrxn', 'create', array('id' => $refundIDs['financialTrxnId'], 'trxn_id' => $params['refund_trxn_id']));
             }
           }
+          $cardType = CRM_Utils_Array::value('card_type', $params);
+          $panTruncation = CRM_Utils_Array::value('pan_truncation', $params);
+          CRM_Core_BAO_FinancialTrxn::updateCreditCardDetails($params['contribution']->id, $panTruncation, $cardType);
         }
       }
 
@@ -3887,6 +3899,7 @@ WHERE eft.financial_trxn_id IN ({$trxnId}, {$baseTrxnId['financialTrxnId']})
 
       $relationTypeId = key(CRM_Core_PseudoConstant::accountOptionValues('account_relationship', NULL, " AND v.name LIKE 'Accounts Receivable Account is' "));
       $trxnsData['from_financial_account_id'] = CRM_Contribute_PseudoConstant::financialAccountType($contributionDAO->financial_type_id, $relationTypeId);
+      // @todo remove deprecated fn call.
       $trxnsData['status_id'] = CRM_Core_OptionGroup::getValue('contribution_status', 'Refunded', 'name');
       // record the entry
       $financialTrxn = CRM_Contribute_BAO_Contribution::recordFinancialAccounts($params, $trxnsData);
@@ -4763,23 +4776,8 @@ LIMIT 1;";
     if (!empty($pageValues['receipt_from_email'])) {
       return array($pageValues['receipt_from_name'], $pageValues['receipt_from_email']);
     }
-    // If we are still empty fall back to the domain.
-    $domain = civicrm_api3('domain', 'getsingle', array('id' => CRM_Core_Config::domainID()));
-    if (!empty($domain['from_email'])) {
-      return array($domain['from_name'], $domain['from_email']);
-    }
-    if (!empty($domain['domain_email'])) {
-      return array($domain['name'], $domain['domain_email']);
-    }
-    $userID = CRM_Core_Session::singleton()->getLoggedInContactID();
-    $userName = '';
-    $userEmail = '';
-    if (!empty($userID)) {
-      list($userName, $userEmail) = CRM_Contact_BAO_Contact_Location::getEmailDetails($userID);
-    }
-    // If still empty fall back to the logged in user details.
-    // return empty values no matter what.
-    return array($userName, $userEmail);
+    // If we are still empty fall back to the domain or logged in user information.
+    return CRM_Core_BAO_Domain::getDefaultReceiptFrom();
   }
 
   /**

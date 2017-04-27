@@ -1230,8 +1230,19 @@ class CRM_Member_Form_Membership extends CRM_Member_Form {
       'start_date' => 'startDate',
       'end_date' => 'endDate',
     );
+    $dateModified = FALSE;
     foreach ($dateTypes as $dateField => $dateVariable) {
+      if (!empty($params['id'])) {
+        $membershipDate = CRM_Core_DAO::getFieldValue('CRM_Member_DAO_Membership', $params['id'], $dateField, 'id');
+        if ($membershipDate != date('Y-m-d', strtotime($formValues[$dateField]))) {
+          $dateModified = TRUE;
+        }
+      }
       $$dateVariable = CRM_Utils_Date::processDate($formValues[$dateField]);
+    }
+    //skip status calculation on update if none of the dates are modified.
+    if (!empty($params['id']) && empty($params['is_override']) && !$dateModified) {
+      $params['skipStatusCal'] = TRUE;
     }
 
     $memTypeNumTerms = empty($termsByType) ? CRM_Utils_Array::value('num_terms', $formValues) : NULL;
@@ -1314,7 +1325,7 @@ class CRM_Member_Form_Membership extends CRM_Member_Form {
       }
 
       if (empty($params['is_override']) &&
-        CRM_Utils_Array::value('contribution_status_id', $params) == array_search('Pending', CRM_Contribute_PseudoConstant::contributionStatus(NULL, 'name'))
+        CRM_Utils_Array::value('contribution_status_id', $params) != array_search('Completed', $allContributionStatus)
       ) {
         $params['status_id'] = array_search('Pending', $allMemberStatus);
         $params['skipStatusCal'] = TRUE;
