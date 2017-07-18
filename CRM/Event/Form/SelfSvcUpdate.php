@@ -274,11 +274,10 @@ class CRM_Event_Form_SelfSvcUpdate extends CRM_Core_Form {
    * return @void
    */
   public function transferParticipant($params) {
-    $transferUrl = 'civicrm/event/form/selfsvctransfer';
-    $url = CRM_Utils_System::url('civicrm/event/selfsvctransfer', 'reset=1&action=add&pid=' . $this->_participant_id . '&cs=' . $this->_userChecksum);
-    $this->controller->setDestination($url);
-    $session = CRM_Core_Session::singleton();
-    $session->replaceUserContext($url);
+    CRM_Utils_System::redirect(CRM_Utils_System::url(
+      'civicrm/event/selfsvctransfer',
+      'reset=1&action=add&pid=' . $this->_participant_id . '&cs=' . $this->_userChecksum
+    ));
   }
 
   /**
