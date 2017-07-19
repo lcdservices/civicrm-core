@@ -398,7 +398,7 @@ class CRM_Event_Selector_Search extends CRM_Core_Selector_Base implements CRM_Co
         $links[] = array(
           'name' => ts('Transfer or Cancel'),
           'url' => 'civicrm/event/selfsvcupdate',
-          'qs' => 'reset=1&pid=%%id%%&cs=' . CRM_Contact_BAO_Contact_Utils::generateChecksum($result->contact_id, NULL, 'inf'),
+          'qs' => 'reset=1&pid=%%id%%&is_backoffice=1&cs=' . CRM_Contact_BAO_Contact_Utils::generateChecksum($result->contact_id, NULL, 'inf'),
           'title' => ts('Transfer or Cancel'),
         );
       }

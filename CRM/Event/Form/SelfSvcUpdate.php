@@ -108,6 +108,12 @@ class CRM_Event_Form_SelfSvcUpdate extends CRM_Core_Form {
    */
   protected $_details = array();
   /**
+   * Is backoffice form?
+   *
+   * @array bool
+   */
+  protected $_isBackoffice = FALSE;
+  /**
    * Set variables up before form is built based on participant ID from URL
    *
    * @return void
@@ -119,6 +125,7 @@ class CRM_Event_Form_SelfSvcUpdate extends CRM_Core_Form {
     $participant = $values = array();
     $this->_participant_id = CRM_Utils_Request::retrieve('pid', 'Positive', $this, FALSE, NULL, 'REQUEST');
     $this->_userChecksum = CRM_Utils_Request::retrieve('cs', 'String', $this, FALSE, NULL, 'REQUEST');
+    $this->_isBackoffice = CRM_Utils_Request::retrieve('is_backoffice', 'String', $this, FALSE, NULL, 'REQUEST');
     $params = array('id' => $this->_participant_id);
     $this->_participant = CRM_Event_BAO_Participant::getValues($params, $values, $participant);
     $this->_part_values = $values[$this->_participant_id];
@@ -274,9 +281,10 @@ class CRM_Event_Form_SelfSvcUpdate extends CRM_Core_Form {
    * return @void
    */
   public function transferParticipant($params) {
+    $isBackOfficeArg = $this->_isBackoffice ? '&is_backoffice=1' : '';
     CRM_Utils_System::redirect(CRM_Utils_System::url(
       'civicrm/event/selfsvctransfer',
-      'reset=1&action=add&pid=' . $this->_participant_id . '&cs=' . $this->_userChecksum
+      'reset=1&action=add&pid=' . $this->_participant_id . $isBackOfficeArg . '&cs=' . $this->_userChecksum
     ));
   }
 
@@ -357,6 +365,9 @@ class CRM_Event_Form_SelfSvcUpdate extends CRM_Core_Form {
     $statusMsg = ts('Event registration information for %1 has been updated.', array(1 => $this->_contact_name));
     $statusMsg .= ' ' . ts('A cancellation email has been sent to %1.', array(1 => $this->_contact_email));
     CRM_Core_Session::setStatus($statusMsg, ts('Thanks'), 'success');
+    if (!empty($this->_isBackoffice)) {
+      return;
+    }
     $url = CRM_Utils_System::url('civicrm/event/info', "reset=1&id={$this->_event_id}&noFullMsg=true");
     CRM_Utils_System::redirect($url);
   }

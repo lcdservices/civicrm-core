@@ -136,6 +136,13 @@ class CRM_Event_Form_SelfSvcTransfer extends CRM_Core_Form {
   protected $contact_id;
 
   /**
+   * Is backoffice form?
+   *
+   * @array bool
+   */
+  protected $_isBackoffice = FALSE;
+
+  /**
    * Get source values for transfer based on participant id in URL. Line items will
    * be transferred to this participant - at this point no transaction changes processed
    *
@@ -147,6 +154,7 @@ class CRM_Event_Form_SelfSvcTransfer extends CRM_Core_Form {
     $this->_userContext = $session->readUserContext();
     $this->_from_participant_id = CRM_Utils_Request::retrieve('pid', 'Positive', $this, FALSE, NULL, 'REQUEST');
     $this->_userChecksum = CRM_Utils_Request::retrieve('cs', 'String', $this, FALSE, NULL, 'REQUEST');
+    $this->_isBackoffice = CRM_Utils_Request::retrieve('is_backoffice', 'String', $this, FALSE, NULL, 'REQUEST');
     $params = array('id' => $this->_from_participant_id);
     $participant = $values = array();
     $this->_participant = CRM_Event_BAO_Participant::getValues($params, $values, $participant);
@@ -364,6 +372,9 @@ class CRM_Event_Form_SelfSvcTransfer extends CRM_Core_Form {
     $statusMsg = ts('Event registration information for %1 has been updated.', array(1 => $displayName));
     $statusMsg .= ' ' . ts('A confirmation email has been sent to %1.', array(1 => $email));
     CRM_Core_Session::setStatus($statusMsg, ts('Registration Transferred'), 'success');
+    if (!empty($this->_isBackoffice)) {
+      return;
+    }
     $url = CRM_Utils_System::url('civicrm/event/info', "reset=1&id={$this->_event_id}");
     CRM_Utils_System::redirect($url);
   }

@@ -106,7 +106,7 @@ class CRM_Event_Form_ParticipantView extends CRM_Core_Form {
     if (CRM_Core_Permission::check('edit event participants') && !in_array($status, array('Cancelled', 'Transferred'))) {
       $this->assign('transferOrCancelLink', CRM_Utils_System::url(
         'civicrm/event/selfsvcupdate',
-        sprintf("reset=1&pid=%d&cs=%s", $participantID, CRM_Contact_BAO_Contact_Utils::generateChecksum($contactID, NULL, 'inf'))
+        sprintf("reset=1&pid=%d&is_backoffice=1&cs=%s", $participantID, CRM_Contact_BAO_Contact_Utils::generateChecksum($contactID, NULL, 'inf'))
       ));
     }
 
