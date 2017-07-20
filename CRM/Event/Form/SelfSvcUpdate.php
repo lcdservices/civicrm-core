@@ -166,7 +166,7 @@ class CRM_Event_Form_SelfSvcUpdate extends CRM_Core_Form {
     while ($dao->fetch()) {
       $details['status']  = $dao->status;
       $details['role'] = $dao->role;
-      $details['fee_level']   = $dao->fee_level;
+      $details['fee_level'] = trim($dao->fee_level, CRM_Core_DAO::VALUE_SEPARATOR);
       $details['fee_amount'] = $dao->fee_amount;
       $details['register_date'] = $dao->register_date;
       $details['event_start_date'] = $dao->start_date;
@@ -185,11 +185,11 @@ class CRM_Event_Form_SelfSvcUpdate extends CRM_Core_Form {
     }
     $start_time = new Datetime($start_date);
     $timenow = new Datetime();
-    if (!empty($start_time) && $start_time < $timenow) {
+    if (!$this->_isBackoffice && !empty($start_time) && $start_time < $timenow) {
       $status = ts("Registration for this event cannot be cancelled or transferred once the event has begun. Contact the event organizer if you have questions.");
       CRM_Core_Error::statusBounce($status, $url, ts('Sorry'));
     }
-    if (!empty($time_limit) && $time_limit > 0) {
+    if (!$this->_isBackoffice && !empty($time_limit) && $time_limit > 0) {
       $interval = $timenow->diff($start_time);
       $days = $interval->format('%d');
       $hours   = $interval->format('%h');
