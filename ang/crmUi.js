@@ -788,6 +788,7 @@
           };
           this.isSelectable = function(step) {
             if (step.selected) return false;
+            if (this.$validStep()) return true;
             var result = false;
             angular.forEach(steps, function(otherStep, otherKey) {
               if (step === otherStep && otherKey <= maxVisited) result = true;
