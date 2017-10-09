@@ -335,6 +335,7 @@
                 'api.email.getvalue': {'return': 'email'}
               }
             });
+            crmMailingCache.put('mailing-' + mailing.id + '-recipient-params', params.recipients);
           }
           delete params.recipients; // the content was merged in
           recipientCount = qApi('Mailing', 'create', params).then(function (recipResult) {

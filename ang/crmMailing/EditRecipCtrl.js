@@ -18,6 +18,7 @@
     };
 
     $scope.recipients = null;
+    $scope.outdated = null;
 
     $scope.getRecipientsEstimate = function() {
       var ts = $scope.ts;
@@ -25,12 +26,17 @@
         return ts('(Estimating)');
       }
       if ($scope.recipients === 0) {
-        return ts('No recipients');
+        return ts('Estimate recipient count');
       }
-      if ($scope.recipients === 1) {
-        return ts('~1 recipient');
+      return ts('Refresh recipient count');
+    };
+
+    $scope.getRecipientCount = function() {
+      var ts = $scope.ts;
+      if ($scope.recipients === 0) {
+        return ts('(unknown)');
       }
-      return ts('~%1 recipients', {1: $scope.recipients});
+      return ($scope.recipients === 1) ? ts('~1 recipient') : ts('~%1 recipients', {1 : $scope.recipients});
     };
 
     // We monitor four fields -- use debounce so that changes across the
@@ -41,6 +47,7 @@
           return;
         }
         crmMailingMgr.previewRecipientCount($scope.mailing, crmMailingCache, false).then(function(recipients) {
+          $scope.outdated = (_.difference($scope.mailing.recipients, crmMailingCache.get('mailing-' + $scope.mailing.id + '-recipient-params')) !== 0);
           $scope.recipients = recipients;
         });
       });
@@ -62,24 +69,26 @@
       var options = CRM.utils.adjustDialogDefaults({
         width: '40%',
         autoOpen: false,
-        title: ts('Preview (%1)', {
-          1: $scope.getRecipientsEstimate()
-        })
+        title: ts('Preview (%1)', {1: $scope.getRecipientCount()})
       });
 
-      if (!_.isEmpty(model.sample)) {
-        dialogService.open('recipDialog', '~/crmMailing/PreviewRecipCtrl.html', model, options);
-      }
-      else {
-        return crmStatus({start: ts('Previewing...'), success: ''}, crmMailingMgr.previewRecipients($scope.mailing, RECIPIENTS_PREVIEW_LIMIT).then(function(recipients) {
-          model.sample = recipients;
+      // don't open preview dialog if there is no recipient to show.
+      if ($scope.recipients !== 0) {
+        if (!_.isEmpty(model.sample)) {
           dialogService.open('recipDialog', '~/crmMailing/PreviewRecipCtrl.html', model, options);
-        }));
+        }
+        else {
+          return crmStatus({start: ts('Previewing...'), success: ''}, crmMailingMgr.previewRecipients($scope.mailing, RECIPIENTS_PREVIEW_LIMIT).then(function(recipients) {
+            model.sample = recipients;
+            dialogService.open('recipDialog', '~/crmMailing/PreviewRecipCtrl.html', model, options);
+          }));
+        }
       }
     };
 
     $scope.rebuildRecipients = function rebuildRecipients() {
       return crmMailingMgr.previewRecipientCount($scope.mailing, crmMailingCache, true).then(function(recipients) {
+        $scope.outdated = (recipients === 0) ? true : false;
         $scope.recipients = recipients;
       });
     };
