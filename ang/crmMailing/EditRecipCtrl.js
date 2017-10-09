@@ -5,7 +5,7 @@
   // Scope members:
   //  - [input] mailing: object
   //  - [output] recipients: array of recipient records
-  angular.module('crmMailing').controller('EditRecipCtrl', function EditRecipCtrl($scope, dialogService, crmApi, crmMailingMgr, $q, crmMetadata, crmStatus) {
+  angular.module('crmMailing').controller('EditRecipCtrl', function EditRecipCtrl($scope, dialogService, crmApi, crmMailingMgr, $q, crmMetadata, crmStatus, crmMailingCache) {
     // Time to wait before triggering AJAX update to recipients list
     var RECIPIENTS_DEBOUNCE_MS = 100;
     var RECIPIENTS_PREVIEW_LIMIT = 50;
@@ -18,6 +18,7 @@
     };
 
     $scope.recipients = null;
+
     $scope.getRecipientsEstimate = function() {
       var ts = $scope.ts;
       if ($scope.recipients === null) {
@@ -36,11 +37,10 @@
     // four fields can settle-down before AJAX.
     var refreshRecipients = _.debounce(function() {
       $scope.$apply(function() {
-        $scope.recipients = null;
         if (!$scope.mailing) {
           return;
         }
-        crmMailingMgr.previewRecipientCount($scope.mailing).then(function(recipients) {
+        crmMailingMgr.previewRecipientCount($scope.mailing, crmMailingCache, false).then(function(recipients) {
           $scope.recipients = recipients;
         });
       });
@@ -54,21 +54,34 @@
     $scope.$watchCollection("mailing.recipients.mailings.exclude", refreshRecipients);
 
     $scope.previewRecipients = function previewRecipients() {
-      return crmStatus({start: ts('Previewing...'), success: ''}, crmMailingMgr.previewRecipients($scope.mailing, RECIPIENTS_PREVIEW_LIMIT).then(function(recipients) {
-        var model = {
-          count: $scope.recipients,
-          sample: recipients,
-          sampleLimit: RECIPIENTS_PREVIEW_LIMIT
-        };
-        var options = CRM.utils.adjustDialogDefaults({
-          width: '40%',
-          autoOpen: false,
-          title: ts('Preview (%1)', {
-            1: $scope.getRecipientsEstimate()
-          })
-        });
+      var model = {
+        count: $scope.recipients,
+        sample: crmMailingCache.get('mailing-' + $scope.mailing.id + '-recipient-list'),
+        sampleLimit: RECIPIENTS_PREVIEW_LIMIT
+      };
+      var options = CRM.utils.adjustDialogDefaults({
+        width: '40%',
+        autoOpen: false,
+        title: ts('Preview (%1)', {
+          1: $scope.getRecipientsEstimate()
+        })
+      });
+
+      if (!_.isEmpty(model.sample)) {
         dialogService.open('recipDialog', '~/crmMailing/PreviewRecipCtrl.html', model, options);
-      }));
+      }
+      else {
+        return crmStatus({start: ts('Previewing...'), success: ''}, crmMailingMgr.previewRecipients($scope.mailing, RECIPIENTS_PREVIEW_LIMIT).then(function(recipients) {
+          model.sample = recipients;
+          dialogService.open('recipDialog', '~/crmMailing/PreviewRecipCtrl.html', model, options);
+        }));
+      }
+    };
+
+    $scope.rebuildRecipients = function rebuildRecipients() {
+      return crmMailingMgr.previewRecipientCount($scope.mailing, crmMailingCache, true).then(function(recipients) {
+        $scope.recipients = recipients;
+      });
     };
 
     // Open a dialog for editing the advanced recipient options.
