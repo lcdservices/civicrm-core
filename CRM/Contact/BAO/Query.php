@@ -1970,6 +1970,7 @@ class CRM_Contact_BAO_Query {
         $this->preferredCommunication($values);
         return;
 
+      case 'field_2':
       case 'relation_type_id':
       case 'relation_start_date_high':
       case 'relation_start_date_low':
@@ -4031,7 +4032,7 @@ WHERE  $smartGroupClause
     $relStatus = $this->getWhereValues('relation_status', $grouping);
     $relPermission = $this->getWhereValues('relation_permission', $grouping);
     $targetGroup = $this->getWhereValues('relation_target_group', $grouping);
-
+    $field2 = $this->getWhereValues('field_2',$grouping);
     $nameClause = $name = NULL;
     if ($targetName) {
       $name = trim($targetName[2]);
@@ -4046,6 +4047,18 @@ WHERE  $smartGroupClause
         $name = strtolower(CRM_Core_DAO::escapeString($name));
         $nameClause = "LIKE '%{$name}%'";
       }
+    }
+    if ($field2){
+            //$where = &$this->_where;
+            $field2_contact_ids = explode(',',$field2[2]);
+    if (!empty($field2_contact_ids)){
+      foreach($field2_contact_ids as $k => $v){
+               $this->_where[$grouping][] = 'civicrm_relationship.contact_id_a = '. $v .' OR ' . 'civicrm_relationship.contact_id_b = '. $v;               
+      }
+    }
+    else {
+      $this->_where[$grouping][] = 'civicrm_relationship.contact_id_a = '. $field2[2] .' OR ' . 'civicrm_relationship.contact_id_b = '. $field2[2];       
+     }
     }
 
     $rTypeValues = array();
@@ -4078,11 +4091,21 @@ WHERE  $smartGroupClause
 
     $allRelationshipType = CRM_Contact_BAO_Relationship::getContactRelationshipType(NULL, 'null', NULL, NULL, TRUE);
 
-    if ($nameClause || !$targetGroup) {
-      if (!empty($relationType)) {
-        $this->_qill[$grouping][] = $allRelationshipType[$relationType[2]] . " $name";
+    if (($nameClause|| $field2[2]) || !$targetGroup) {
+      if (!empty($relationType) ) {
+        if ($field2[2]){
+          $this->_qill[$grouping][] = $allRelationshipType[$relationType[2]] . "Contact Id/s : ". $field2[2];          
+        }
+        if ($nameClause){
+          $this->_qill[$grouping][] = $allRelationshipType[$relationType[2]] . " $name";      
+        }
       }
-      else {
+    }
+    else {
+      if ($field2[2]){
+        $this->_qill[$grouping][] = $field2[2];
+      }
+      if ($nameClause){
         $this->_qill[$grouping][] = $name;
       }
     }
