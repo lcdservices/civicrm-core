@@ -23,37 +23,6 @@
  | see the CiviCRM license FAQ at http://civicrm.org/licensing        |
  +--------------------------------------------------------------------+
 *}
-{literal}
-<script type="text/javascript">
-CRM.$(function($) {
-  $(document).ready(function(){
-      if ($('input[name="text_contact_selector"]').val() == 1) {
-      $('.relation-target-name').hide();
-      $('.contact-selector-field-2').show();
-    } 
-    if ($('input[name="text_contact_selector"]').val() == 0) {
-      $('.contact-selector-field-2').hide();
-      $('.relation-target-name').show();
-
-    }  
-
-  $('input[name="text_contact_selector"]').change(function(){
-    if ($(this).val() == 1) {
-      $('.relation-target-name').hide();
-      $('.contact-selector-field-2').show();
-    } 
-    if ($(this).val() == 0) {
-      $('.contact-selector-field-2').hide();
-      $('.relation-target-name').show();
-
-    }
-  
-  });
-  }); 
-  
-});
-</script>
-{/literal}
 
 <div id="relationship" class="form-item">
   <table class="form-layout">
@@ -65,13 +34,11 @@ CRM.$(function($) {
       <td>
          {$form.text_contact_selector.label}<br />
          {$form.text_contact_selector.html}
-  <div class="contact-selector-field-2">
-           {$form.field_2.label}<br />
-           {$form.field_2.html|crmAddClass:huge}
+  <div class="contact-selector-relation-target-ids">
+           {$form.relation_target_ids.label}<br />
+           {$form.relation_target_ids.html|crmAddClass:huge}
           </div>
-      </td>
-      <td>
-         <div>
+          <div class="relation-target-name">
            {$form.relation_target_name.label}<br />
            {$form.relation_target_name.html|crmAddClass:huge}
             <div class="description font-italic">
@@ -120,3 +87,27 @@ CRM.$(function($) {
     {/if}
   </table>
 </div>
+{literal}
+<script type="text/javascript">
+CRM.$(function($) {
+  $(document).ready(function(){
+    toggleTargetSelector($('input[name="text_contact_selector"]').val());      
+    $('input[name="text_contact_selector"]').change(function(){
+      toggleTargetSelector($(this).val());
+    });
+
+  }); 
+  function toggleTargetSelector(val) {
+   // do stuff
+   if (val == 1) {
+     $('.relation-target-name').hide();
+     $('.contact-selector-relation-target-ids').show();
+   } 
+   if (val == 0) {
+     $('.contact-selector-relation-target-ids').hide();
+     $('.relation-target-name').show();
+   } 
+  }
+});
+</script>
+{/literal}
