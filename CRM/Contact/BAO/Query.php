@@ -1970,7 +1970,6 @@ class CRM_Contact_BAO_Query {
         $this->preferredCommunication($values);
         return;
 
-      case 'field_2':
       case 'relation_type_id':
       case 'relation_start_date_high':
       case 'relation_start_date_low':
@@ -1982,6 +1981,7 @@ class CRM_Contact_BAO_Query {
       case 'relation_status':
       case 'relation_date_low':
       case 'relation_date_high':
+      case 'relation_target_ids':
         $this->relationship($values);
         $this->_relationshipValuesAdded = TRUE;
         return;
@@ -4032,7 +4032,8 @@ WHERE  $smartGroupClause
     $relStatus = $this->getWhereValues('relation_status', $grouping);
     $relPermission = $this->getWhereValues('relation_permission', $grouping);
     $targetGroup = $this->getWhereValues('relation_target_group', $grouping);
-    $field2 = $this->getWhereValues('field_2',$grouping);
+   
+    $targetIds = $this->getWhereValues('relation_target_ids',$grouping);
     $nameClause = $name = NULL;
     if ($targetName) {
       $name = trim($targetName[2]);
@@ -4048,17 +4049,10 @@ WHERE  $smartGroupClause
         $nameClause = "LIKE '%{$name}%'";
       }
     }
-    if ($field2){
+    elseif ($targetIds){
             //$where = &$this->_where;
-            $field2_contact_ids = explode(',',$field2[2]);
-    if (!empty($field2_contact_ids)){
-      foreach($field2_contact_ids as $k => $v){
-               $this->_where[$grouping][] = 'civicrm_relationship.contact_id_a = '. $v .' OR ' . 'civicrm_relationship.contact_id_b = '. $v;               
-      }
-    }
-    else {
-      $this->_where[$grouping][] = 'civicrm_relationship.contact_id_a = '. $field2[2] .' OR ' . 'civicrm_relationship.contact_id_b = '. $field2[2];       
-     }
+            $targetIds_string = $targetIds[2];
+      $this->_where[$grouping][] = 'civicrm_relationship.contact_id_a IN ('. $targetIds_string .') OR ' . 'civicrm_relationship.contact_id_b IN ('. $targetIds_string .')';               
     }
 
     $rTypeValues = array();
@@ -4090,11 +4084,15 @@ WHERE  $smartGroupClause
     }
 
     $allRelationshipType = CRM_Contact_BAO_Relationship::getContactRelationshipType(NULL, 'null', NULL, NULL, TRUE);
-
-    if (($nameClause|| $field2[2]) || !$targetGroup) {
+    $targetIds_string = $targetIds[2];
+    if (($nameClause|| $targetIds_string) || !$targetGroup) {
       if (!empty($relationType) ) {
-        if ($field2[2]){
-          $this->_qill[$grouping][] = $allRelationshipType[$relationType[2]] . "Contact Id/s : ". $field2[2];          
+        if ($targetIds_string){
+          $contact_ids = explode(',',$targetIds_string);
+          $initial_contact = $contact_ids[0];
+         // $sql  = "SELECT display_name FROM civicrm_contact WHERE id = $contact_ids";
+         // $data = CRM_Core_DAO::executeQuery($sql);
+          $this->_qill[$grouping][] = $allRelationshipType[$relationType[2]] . "Contact Id/s : ". $targetIds_string;          
         }
         if ($nameClause){
           $this->_qill[$grouping][] = $allRelationshipType[$relationType[2]] . " $name";      
@@ -4102,8 +4100,8 @@ WHERE  $smartGroupClause
       }
     }
     else {
-      if ($field2[2]){
-        $this->_qill[$grouping][] = $field2[2];
+      if ($targetIds_string){
+        $this->_qill[$grouping][] = $targetIds_string;
       }
       if ($nameClause){
         $this->_qill[$grouping][] = $name;

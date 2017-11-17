@@ -423,7 +423,7 @@ class CRM_Contact_Form_Search_Criteria {
     $form->addRadio('text_contact_selector', ts('Target Contact'), $textContactSelectorOption);
     $form->setDefaults(array('text_contact_selector' => 0));
     // Pass some params to allow creation of contacts, set multiple and make the field required
-    $form->addEntityRef('field_2', ts(''), array('multiple' => TRUE)); 
+    $form->addEntityRef('relation_target_ids', ts(''), array('multiple' => TRUE)); 
     // relation status
     $relStatusOption = array(ts('Active'), ts('Inactive'), ts('All'));
     $form->addRadio('relation_status', ts('Relationship Status'), $relStatusOption);
