@@ -418,12 +418,13 @@ class CRM_Contact_Form_Search_Criteria {
     $allRelationshipType = CRM_Contact_BAO_Relationship::getContactRelationshipType(NULL, NULL, NULL, NULL, TRUE);
     $form->add('select', 'relation_type_id', ts('Relationship Type'), array('' => ts('- select -')) + $allRelationshipType, FALSE, array('class' => 'crm-select2'));
     $form->addElement('text', 'relation_target_name', ts('Target Contact'), CRM_Core_DAO::getAttribute('CRM_Contact_DAO_Contact', 'sort_name'));
+
     // text contact selector
     $textContactSelectorOption = array(ts('Text Search'), ts('Contact Selector'));
     $form->addRadio('text_contact_selector', ts('Target Contact'), $textContactSelectorOption);
     $form->setDefaults(array('text_contact_selector' => 0));
-    // Pass some params to allow creation of contacts, set multiple and make the field required
-    $form->addEntityRef('relation_target_ids', ts(''), array('multiple' => TRUE)); 
+    $form->addEntityRef('relation_target_ids', ts('Target Contact Selector'), array('multiple' => TRUE));
+
     // relation status
     $relStatusOption = array(ts('Active'), ts('Inactive'), ts('All'));
     $form->addRadio('relation_status', ts('Relationship Status'), $relStatusOption);

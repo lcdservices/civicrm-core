@@ -34,17 +34,15 @@
       <td>
          {$form.text_contact_selector.label}<br />
          {$form.text_contact_selector.html}
-  <div class="contact-selector-relation-target-ids">
-           {$form.relation_target_ids.label}<br />
+         <div class="contact-selector-relation-target-ids">
            {$form.relation_target_ids.html|crmAddClass:huge}
-          </div>
-          <div class="relation-target-name">
-           {$form.relation_target_name.label}<br />
+         </div>
+         <div class="relation-target-name">
            {$form.relation_target_name.html|crmAddClass:huge}
-            <div class="description font-italic">
-                {ts}Complete OR partial contact name.{/ts}
-            </div>
-          </div>
+           <div class="description font-italic">
+             {ts}Complete OR partial contact name.{/ts}
+           </div>
+         </div>
       </td>
     </tr>
     <tr>
@@ -91,20 +89,25 @@
 <script type="text/javascript">
 CRM.$(function($) {
   $(document).ready(function(){
-    toggleTargetSelector($('input[name="text_contact_selector"]').val());      
+    toggleTargetSelector();
     $('input[name="text_contact_selector"]').change(function(){
-      toggleTargetSelector($(this).val());
+      toggleTargetSelector();
     });
 
-  }); 
-  function toggleTargetSelector(val) {
-   // do stuff
-   if (val == 1) {
+  });
+
+  function toggleTargetSelector() {
+    var targetSelection = $('input[name=text_contact_selector]:checked').val();
+
+   // check target selector value
+   if (targetSelection == 1) {
      $('.relation-target-name').hide();
+     $('#relation_target_name').val('');
      $('.contact-selector-relation-target-ids').show();
-   } 
-   if (val == 0) {
+   }
+   else if (targetSelection == 0) {
      $('.contact-selector-relation-target-ids').hide();
+     $('#s2id_relation_target_ids').val('').select2('val', '');
      $('.relation-target-name').show();
    } 
   }

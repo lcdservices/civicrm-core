@@ -4032,8 +4032,8 @@ WHERE  $smartGroupClause
     $relStatus = $this->getWhereValues('relation_status', $grouping);
     $relPermission = $this->getWhereValues('relation_permission', $grouping);
     $targetGroup = $this->getWhereValues('relation_target_group', $grouping);
-   
     $targetIds = $this->getWhereValues('relation_target_ids',$grouping);
+
     $nameClause = $name = NULL;
     if ($targetName) {
       $name = trim($targetName[2]);
@@ -4050,9 +4050,7 @@ WHERE  $smartGroupClause
       }
     }
     elseif ($targetIds){
-            //$where = &$this->_where;
-            $targetIds_string = $targetIds[2];
-      $this->_where[$grouping][] = 'civicrm_relationship.contact_id_a IN ('. $targetIds_string .') OR ' . 'civicrm_relationship.contact_id_b IN ('. $targetIds_string .')';               
+      $this->_where[$grouping][] = 'civicrm_relationship.contact_id_a IN ('. $targetIds[2] .') OR ' . 'civicrm_relationship.contact_id_b IN ('. $targetIds[2] .')';
     }
 
     $rTypeValues = array();
@@ -4084,27 +4082,30 @@ WHERE  $smartGroupClause
     }
 
     $allRelationshipType = CRM_Contact_BAO_Relationship::getContactRelationshipType(NULL, 'null', NULL, NULL, TRUE);
-    $targetIds_string = $targetIds[2];
-    if (($nameClause|| $targetIds_string) || !$targetGroup) {
+    if ($nameClause || $targetIds[2] || !$targetGroup) {
+      if (!empty($targetIds[2])) {
+        $targetIdsArray = explode(',', $targetIds[2]);
+        $targetIdsName = CRM_Contact_BAO_Contact::displayName($targetIdsArray[0]);
+        if (count($targetIdsArray) > 1) {
+          $targetIdsName .= ' (and more)';
+        }
+      }
+
       if (!empty($relationType) ) {
-        if ($targetIds_string){
-          $contact_ids = explode(',',$targetIds_string);
-          $initial_contact = $contact_ids[0];
-         // $sql  = "SELECT display_name FROM civicrm_contact WHERE id = $contact_ids";
-         // $data = CRM_Core_DAO::executeQuery($sql);
-          $this->_qill[$grouping][] = $allRelationshipType[$relationType[2]] . "Contact Id/s : ". $targetIds_string;          
+        if (!empty($targetIds[2])){
+          $this->_qill[$grouping][] = $allRelationshipType[$relationType[2]] . "Target Contact(s): ". $targetIdsName;
         }
         if ($nameClause){
-          $this->_qill[$grouping][] = $allRelationshipType[$relationType[2]] . " $name";      
+          $this->_qill[$grouping][] = $allRelationshipType[$relationType[2]] . "Target Contact(s): ". $name;
         }
       }
-    }
-    else {
-      if ($targetIds_string){
-        $this->_qill[$grouping][] = $targetIds_string;
-      }
-      if ($nameClause){
-        $this->_qill[$grouping][] = $name;
+      else {
+        if (!empty($targetIds[2])){
+          $this->_qill[$grouping][] = "Target Contact(s): ". $targetIdsName;
+        }
+        if ($nameClause){
+          $this->_qill[$grouping][] = "Target Contact(s): ". $name;
+        }
       }
     }
 
