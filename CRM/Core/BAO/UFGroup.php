@@ -742,8 +742,9 @@ class CRM_Core_BAO_UFGroup extends CRM_Core_DAO_UFGroup {
       // hack to add custom data for components
       $components = array('Contribution', 'Participant', 'Membership', 'Activity', 'Case');
       foreach ($components as $value) {
-        $customFields = array_merge($customFields, CRM_Core_BAO_CustomField::getFieldsForImport($value));
+        $customFields = array_merge($customFields, CRM_Core_BAO_CustomField::getFieldsForImport($value, $showAll = FALSE, $onlyParent = FALSE, $search = FALSE, $checkPermission = TRUE, $withMultiple = TRUE));
       }
+    
       $addressCustomFields = CRM_Core_BAO_CustomField::getFieldsForImport('Address');
       $customFields = array_merge($customFields, $addressCustomFields);
       $customFieldCache[$ctype] = array($customFields, $addressCustomFields);

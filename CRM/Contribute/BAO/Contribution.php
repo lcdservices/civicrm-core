@@ -1175,7 +1175,7 @@ INNER JOIN  civicrm_contact contact ON ( contact.id = c.contact_id )
       $fields[$key] = $var;
     }
 
-    $fields = array_merge($fields, CRM_Core_BAO_CustomField::getFieldsForImport('Contribution'));
+    $fields = array_merge($fields, CRM_Core_BAO_CustomField::getFieldsForImport('Contribution',  $showAll = FALSE, $onlyParent = FALSE, $search = FALSE, $checkPermission = TRUE, $withMultiple = TRUE));
     return $fields;
   }
 
