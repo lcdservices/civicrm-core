@@ -341,11 +341,7 @@
     {/if}
     <!-- end of PCP -->
 
-  {if !$payNow}
-    <div id="customData" class="crm-contribution-form-block-customData"></div>
-  {/if}
-
-  {include file="CRM/Custom/Form/Edit.tpl"}
+  <div id='customData'>{include file="CRM/Contact/Form/Edit/CustomData.tpl"}</div>
 
   {literal}
   <script type="text/javascript">
@@ -353,6 +349,37 @@
     {/literal}
       {if $buildPriceSet}{literal}buildAmount();{/literal}{/if}
     {literal}
+
+    var values = $("#financial_type_id").val();
+      CRM.buildCustomData({/literal}"{$customDataType}"{literal}, values).one('crmLoad', function() {
+        loadMultiRecordFields(values);
+    });
+
+    function loadMultiRecordFields(subTypeValues) {
+      if (subTypeValues === false) {
+        subTypeValues = null;
+      }
+      else if (!subTypeValues) {
+        subTypeValues = {/literal}"{$paramSubType}"{literal};
+      }
+      function loadNextRecord(i, groupValue, groupCount) {
+        if (i < groupCount) {
+          CRM.buildCustomData({/literal}"{$customDataType}"{literal}, subTypeValues, null, i, groupValue, true).one('crmLoad', function() {
+            loadNextRecord(i+1, groupValue, groupCount);
+          });
+        }
+      }
+      {/literal}
+      {foreach from=$customValueCount item="groupCount" key="groupValue"}
+      {if $groupValue}{literal}
+        loadNextRecord(1, {/literal}{$groupValue}{literal}, {/literal}{$groupCount}{literal});
+      {/literal}
+      {/if}
+      {/foreach}
+      {literal}
+    }
+
+    loadMultiRecordFields();
 
     // bind first click of accordion header to load crm-accordion-body with snippet
     // everything else taken care of by cj().crm-accordions()
@@ -364,6 +391,22 @@
         loadPanes(cj(this).attr('id'));
       });
     });
+    
+     cj('.crm-contribution-form-block').on('click', '.crm-custom-value-del', function(e) {
+      e.preventDefault();
+      var $el = cj(this),
+        msg = '{/literal}{ts escape="js"}The record will be deleted immediately. This action cannot be undone.{/ts}{literal}';
+      CRM.confirm({title: $el.attr('title'), message: msg})
+        .on('crmConfirm:yes', function() {
+          var url = CRM.url('civicrm/ajax/multicustomvalue');
+          var request = cj.post(url, $el.data('post'));
+          CRM.status({success: '{/literal}{ts escape="js"}Record Deleted{/ts}{literal}'}, request);
+          var addClass = '.add-more-link-' + $el.data('post').groupID;
+          $el.closest('div.crm-custom-accordion').remove();
+          cj('div' + addClass).last().show();
+        });
+    });
+    
     // load panes function calls for snippet based on id of crm-accordion-header
     function loadPanes( id ) {
       var url = "{/literal}{crmURL p='civicrm/contact/view/contribution' q='snippet=4&formType=' h=0}{literal}" + id;

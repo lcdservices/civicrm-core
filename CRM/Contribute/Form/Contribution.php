@@ -202,6 +202,10 @@ class CRM_Contribute_Form_Contribution extends CRM_Contribute_Form_AbstractEditP
    * @var string
    */
   protected $statusMessageTitle;
+  
+  public $_customValueCount;
+  
+  protected $_editOptions;
 
   /**
    * Explicitly declare the form context.
@@ -221,6 +225,8 @@ class CRM_Contribute_Form_Contribution extends CRM_Contribute_Form_AbstractEditP
     }
 
     parent::preProcess();
+    
+    $this->_editOptions = array('CustomData'=>1);
 
     $this->_formType = CRM_Utils_Array::value('formType', $_GET);
 
@@ -275,8 +281,69 @@ class CRM_Contribute_Form_Contribution extends CRM_Contribute_Form_AbstractEditP
     }
 
     // when custom data is included in this page
+    
+    $this->set('type', 'Contribution');
+    $this->set('subType', CRM_Utils_Array::value('financial_type_id', $_POST));
+    $this->set('entityId', $this->_id);
+    $subType = CRM_Utils_Array::value('financial_type_id', $_POST);
+    
+    // retain the multiple count custom fields value
     if (!empty($_POST['hidden_custom'])) {
-      $this->applyCustomData('Contribution', CRM_Utils_Array::value('financial_type_id', $_POST), $this->_id);
+      $customGroupCount = CRM_Utils_Array::value('hidden_custom_group_count', $_POST);
+
+      if ($contribSubType = CRM_Utils_Array::value('financial_type_id', $_POST)) {
+        $paramSubType = $contribSubType;
+      }
+
+      $this->_getCachedTree = FALSE;
+      unset($customGroupCount[0]);
+      foreach ($customGroupCount as $groupID => $groupCount) {
+        if ($groupCount > 1) {
+          $this->set('groupID', $groupID);
+          //loop the group
+          for ($i = 0; $i <= $groupCount; $i++) {
+            CRM_Custom_Form_CustomData::preProcess($this, NULL, $contribSubType,
+              $i, 'Contribution', $this->_id
+            );
+            CRM_Contact_Form_Edit_CustomData::buildQuickForm($this);
+          }
+        }
+      }
+
+      //reset all the ajax stuff, for normal processing
+      if (isset($this->_groupTree)) {
+        $this->_groupTree = NULL;
+      }
+      $this->set('groupID', NULL);
+      $this->_getCachedTree = TRUE;
+    }
+
+    // execute preProcess dynamically by js else execute normal preProcess
+    if (array_key_exists('CustomData', $this->_editOptions)) {
+      //assign a parameter to pass for sub type multivalue
+      //custom field to load
+      if ($subType || isset($paramSubType)) {
+        $paramSubType = (isset($paramSubType)) ? $paramSubType :
+          str_replace(CRM_Core_DAO::VALUE_SEPARATOR, ',', trim($subType, CRM_Core_DAO::VALUE_SEPARATOR));
+
+        $this->assign('paramSubType', $paramSubType);
+      }
+
+      if (CRM_Utils_Request::retrieve('type', 'String')) {
+        CRM_Contact_Form_Edit_CustomData::preProcess($this);
+      }
+      else {
+        $contribSubType = $subType;
+        // need contact sub type to build related grouptree array during post process
+        if (!empty($_POST['financial_type_id'])) {
+          $contribSubType = $_POST['financial_type_id'];
+        }
+        //only custom data has preprocess hence directly call it
+        CRM_Custom_Form_CustomData::preProcess($this, NULL, $contribSubType,
+          1, 'Contribution', $this->_id
+        );
+        $this->assign('customValueCount', $this->_customValueCount);
+      }
     }
 
     $this->_lineItems = array();
