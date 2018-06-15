@@ -80,9 +80,8 @@ class CRM_Event_Form_Task extends CRM_Core_Form {
 
   /**
    * @param CRM_Core_Form $form
-   * @param bool $useTable
    */
-  public static function preProcessCommon(&$form, $useTable = FALSE) {
+  public static function preProcessCommon(&$form) {
     $form->_participantIds = array();
 
     $values = $form->controller->exportValues($form->get('searchFormName'));

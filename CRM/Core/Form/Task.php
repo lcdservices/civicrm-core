@@ -88,11 +88,10 @@ abstract class CRM_Core_Form_Task extends CRM_Core_Form {
    * Common pre-processing function.
    *
    * @param CRM_Core_Form $form
-   * @param bool $useTable FIXME This parameter could probably be deprecated as it's not used here
    *
    * @throws \CRM_Core_Exception
    */
-  public static function preProcessCommon(&$form, $useTable = FALSE) {
+  public static function preProcessCommon(&$form) {
     $form->_entityIds = array();
 
     $values = $form->controller->exportValues($form->get('searchFormName'));
