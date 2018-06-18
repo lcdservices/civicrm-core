@@ -994,8 +994,11 @@ class CRM_Core_BAO_UFGroup extends CRM_Core_DAO_UFGroup {
 
     $details = $query->searchQuery(0, 0, NULL, FALSE, FALSE,
       FALSE, FALSE, FALSE, $additionalWhereClause);
-    if (!$details->fetch()) {
-      return;
+    while($details->fetch()){
+      if (!$details) {
+        return;
+      }
+      $details = $details;
     }
     $query->convertToPseudoNames($details);
     $config = CRM_Core_Config::singleton();
