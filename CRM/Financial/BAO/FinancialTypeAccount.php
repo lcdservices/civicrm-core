@@ -150,10 +150,11 @@ class CRM_Financial_BAO_FinancialTypeAccount extends CRM_Financial_DAO_EntityFin
    *
    * @param int $paymentInstrumentValue
    *   Payment instrument value.
+   * @param bool $returnName
    *
    * @return null|int
    */
-  public static function getInstrumentFinancialAccount($paymentInstrumentValue) {
+  public static function getInstrumentFinancialAccount($paymentInstrumentValue, $returnName = FALSE) {
     $paymentInstrument = civicrm_api3('OptionValue', 'getsingle', array(
       'return' => array("id"),
       'value' => $paymentInstrumentValue,
@@ -164,6 +165,11 @@ class CRM_Financial_BAO_FinancialTypeAccount extends CRM_Financial_DAO_EntityFin
       NULL,
       'civicrm_option_value'
     );
+
+    if ($returnName) {
+      return civicrm_api3('FinancialAccount', 'getValue', ['id' => $financialAccountId, 'return' => 'name']);
+    }
+
     return $financialAccountId;
   }
 
