@@ -90,15 +90,19 @@ class CRM_Contact_Form_Task_EmailCommon {
 
     $form->_emails = $fromEmailValues;
     $form->_fromEmails = $fromEmailValues;
-    if (is_numeric(key($form->_fromEmails))) {
-      // Add signature
-      $defaultEmail = civicrm_api3('email', 'getsingle', array('id' => key($form->_fromEmails)));
+    $email_addaress = '';
+    $from_key = key($fromEmailValues);
+    $email_addaress = CRM_Utils_Mail::pluckEmailFromHeader($from_key);
+    $defaultEmail = civicrm_api3('email', 'get', array('email' => $email_addaress));
+    if( !empty($defaultEmail['values']) ){
+      $email_id = $defaultEmail['id'];
+      $email_array = $defaultEmail['values'][$email_id];
       $defaults = array();
-      if (!empty($defaultEmail['signature_html'])) {
-        $defaults['html_message'] = '<br/><br/>--' . $defaultEmail['signature_html'];
+      if (!empty($email_array['signature_html'])) {
+        $defaults['html_message'] = '<br/><br/>--' . $email_array['signature_html'];
       }
-      if (!empty($defaultEmail['signature_text'])) {
-        $defaults['text_message'] = "\n\n--\n" . $defaultEmail['signature_text'];
+      if (!empty($email_array['signature_text'])) {
+        $defaults['text_message'] = "\n\n--\n" . $email_array['signature_text'];
       }
       $form->setDefaults($defaults);
     }
