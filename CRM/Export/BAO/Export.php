@@ -509,23 +509,11 @@ INSERT INTO {$componentTable} SELECT distinct gc.contact_id FROM civicrm_group_c
         //first loop through output columns so that we return what is required, and in same order.
         foreach ($outputColumns as $field => $value) {
 
-          // add im_provider to $dao object
-          if ($field == 'im_provider' && property_exists($iterationDAO, 'provider_id')) {
-            $iterationDAO->im_provider = $iterationDAO->provider_id;
-          }
-
           //build row values (data)
           $fieldValue = NULL;
           if (property_exists($iterationDAO, $field)) {
             $fieldValue = $iterationDAO->$field;
-            // to get phone type from phone type id
-            if ($field == 'phone_type_id' && isset($phoneTypes[$fieldValue])) {
-              $fieldValue = $phoneTypes[$fieldValue];
-            }
-            elseif ($field == 'provider_id' || $field == 'im_provider') {
-              $fieldValue = CRM_Utils_Array::value($fieldValue, $imProviders);
-            }
-            elseif (strstr($field, 'master_id')) {
+            if (strstr($field, 'master_id')) {
               $masterAddressId = NULL;
               if (isset($iterationDAO->$field)) {
                 $masterAddressId = $iterationDAO->$field;
@@ -1595,14 +1583,8 @@ WHERE  {$whereClause}";
     foreach ($value as $relationField => $relationValue) {
       if (is_object($relDAO) && property_exists($relDAO, $relationField)) {
         $fieldValue = $relDAO->$relationField;
-        if ($relationField == 'phone_type_id') {
-          $fieldValue = $phoneTypes[$relationValue];
-        }
-        elseif ($relationField == 'provider_id') {
-          $fieldValue = CRM_Utils_Array::value($relationValue, $imProviders);
-        }
         // CRM-13995
-        elseif (is_object($relDAO) && in_array($relationField, array(
+        if (is_object($relDAO) && in_array($relationField, array(
             'email_greeting',
             'postal_greeting',
             'addressee',
