@@ -21,8 +21,9 @@
           });
         };
         scope.doSend = function doSend(recipient) {
+          var trim_recipient = JSON.parse(JSON.stringify(recipient).replace(/\,\s/g, ",") );
           scope.$eval(attr.onSend, {
-            preview: {recipient: recipient}
+            preview: {recipient: trim_recipient}
           });
         };
 
