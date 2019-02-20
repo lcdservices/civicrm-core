@@ -173,35 +173,27 @@ class CRM_Core_Form_Search extends CRM_Core_Form {
   }
 
   /**
-   * Global validation rules for the form.
+   * Format some special form values including date fields
    *
-   * @param array $fields
-   *   Posted values of the form.
-   * @param array $files
-   * @param object $form
+   * @param string $name
+   * @param string $value
+   * @param string $dataType
    *
-   * @return array
-   *   list of errors to be posted back to the form
+   * @return string|array
    */
-  public static function formRule($fields, $files, $form) {
-    $errors = [];
-    if (!is_a($form, 'CRM_Core_Form_Search')) {
-      // So this gets hit with a form object when doing an activity date search from
-      // advanced search, but a NULL object when doing a pledge search.
-      return $errors;
+  public function formatSpecialFormValue($name, $value, $dataType) {
+    if ($dataType == 'Date') {
+      // @todo we should pick up searchDate format here
+      $value = date('d/m/Y', strtotime($value));
     }
-    foreach ($form->getSearchFieldMetadata() as $entity => $spec) {
-      foreach ($spec as $fieldName => $fieldSpec) {
-        if ($fieldSpec['type'] === CRM_Utils_Type::T_DATE || $fieldSpec['type'] === (CRM_Utils_Type::T_DATE + CRM_Utils_Type::T_TIME)) {
-          if (!empty($fields[$fieldName . '_high']) && !empty($fields[$fieldName . '_low']) && empty($fields[$fieldName . '_relative'])) {
-            if (strtotime($fields[$fieldName . '_low']) > strtotime($fields[$fieldName . '_high'])) {
-              $errors[$fieldName . '_low'] = ts('%1: Please check that your date range is in correct chronological order.', [1 => $fieldSpec['title']]);
-            }
-          }
-        }
-      }
+    elseif (in_array($name, [
+      'privacy_options',
+      'activity_tags',
+    ])) {
+      $value = explode(',', $value);
     }
-    return $errors;
+
+    return $value;
   }
 
   /**
@@ -414,20 +406,24 @@ class CRM_Core_Form_Search extends CRM_Core_Form {
       return;
     }
 
-    $enabledComponents = CRM_Core_Component::getEnabledComponents();
+    $enabledComponents = array_merge(CRM_Core_Component::getEnabledComponents(), [
+      'CiviActivity' => ['namespace' => 'CRM_Activity'],
+    ]);
     if (!$this->_component) {
       if (method_exists('CRM_Contact_Form_Search', 'setSearchParamFromUrl')) {
         CRM_Contact_Form_Search::setSearchParamFromUrl($this);
       }
       foreach ($enabledComponents as $component) {
-        $searchClass = $component->namespace . '_Form_Search';
+        $component = (array) $component;
+        $searchClass = $component['namespace'] . '_Form_Search';
         if (method_exists($searchClass, 'setSearchParamFromUrl')) {
           $searchClass::setSearchParamFromUrl($this);
         }
       }
     }
     elseif (array_key_exists($this->_component, $enabledComponents)) {
-      $searchClass = $enabledComponents[$this->_component]->namespace . '_Form_Search';
+      $component = (array) $enabledComponents[$this->_component];
+      $searchClass = $component['namespace'] . '_Form_Search';
       if (method_exists($searchClass, 'setSearchParamFromUrl')) {
         $searchClass::setSearchParamFromUrl($this);
       }
