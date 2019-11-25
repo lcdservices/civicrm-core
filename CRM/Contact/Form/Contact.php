@@ -870,7 +870,8 @@ class CRM_Contact_Form_Contact extends CRM_Core_Form {
     }
 
     $group = CRM_Utils_Array::value('group', $params);
-    if (!empty($group) && is_array($group)) {
+    if (!empty($group)) {
+      $group = is_array($group) ? $group : explode(',', $group);
       unset($params['group']);
       foreach ($group as $key => $value) {
         $params['group'][$value] = 1;
